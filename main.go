@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
+	"math/rand"
 	"net"
 	"os"
 	"time"
@@ -17,18 +19,30 @@ type streamServer struct {
 }
 
 func (s *streamServer) GetLiveStream(_ *emptypb.Empty, stream telemetry.StreamService_GetLiveStreamServer) error {
-	value := 0.0
+	startTime := time.Now()
+	ticker := time.NewTicker(20 * time.Millisecond) // 50 Hz
+	defer ticker.Stop()
+
 	for {
-		point := &telemetry.TelemetryPoint{
-			Value:     value,
-			Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case t := <-ticker.C:
+			elapsed := t.Sub(startTime).Seconds()
+
+			// Generate a sine wave (e.g., 1 Hz frequency) plus some noise (-0.1 to 0.1)
+			noise := rand.Float64()*0.2 - 0.1
+			value := math.Sin(2*math.Pi*1.0*elapsed) + noise
+
+			point := &telemetry.TelemetryPoint{
+				Value:     value,
+				Timestamp: t.UnixNano() / int64(time.Millisecond),
+			}
+			if err := stream.Send(point); err != nil {
+				log.Printf("Error sending point: %v", err)
+				return err
+			}
 		}
-		if err := stream.Send(point); err != nil {
-			log.Printf("Error sending point: %v", err)
-			return err
-		}
-		value += 1.0
-		time.Sleep(1 * time.Second)
 	}
 }
 
