@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package telemetry;
+option go_package = "github.com/johanastborg/go-grpc-xds-ts-server/telemetry";
+
+import "google/protobuf/empty.proto";
+
+message TelemetryPoint {
+  double value = 1;
+  int64 timestamp = 2;
+}
+
+service StreamService {
+  rpc GetLiveStream(google.protobuf.Empty) returns (stream TelemetryPoint);
+}

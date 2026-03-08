@@ -15,7 +15,11 @@ go_sdk.download(version = "1.23.0")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
-use_repo(go_deps)
+use_repo(
+    go_deps,
+    "org_golang_google_grpc",
+    "org_golang_google_protobuf",
+)
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
@@ -24,3 +28,6 @@ oci.pull(
     image = "gcr.io/distroless/static",
 )
 use_repo(oci, "distroless_static")
+
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "protobuf", version = "33.4", repo_name = "com_google_protobuf")

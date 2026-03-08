@@ -1,39 +1,53 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
+	"net"
 	"os"
+	"time"
+
+	"github.com/johanastborg/go-grpc-xds-ts-server/telemetry"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type Response struct {
-	Message string `json:"message"`
+type streamServer struct {
+	telemetry.UnimplementedStreamServiceServer
 }
 
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	resp := Response{Message: "Hello, Bazel-built Go REST API!!!"}
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("Error encoding response: %v", err)
+func (s *streamServer) GetLiveStream(_ *emptypb.Empty, stream telemetry.StreamService_GetLiveStreamServer) error {
+	value := 0.0
+	for {
+		point := &telemetry.TelemetryPoint{
+			Value:     value,
+			Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+		}
+		if err := stream.Send(point); err != nil {
+			log.Printf("Error sending point: %v", err)
+			return err
+		}
+		value += 1.0
+		time.Sleep(1 * time.Second)
 	}
 }
 
 func main() {
-	http.HandleFunc("/api/hello", helloHandler)
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	fmt.Printf("Server starting on port %s...\n", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	lis, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	grpcServer := grpc.NewServer()
+	telemetry.RegisterStreamServiceServer(grpcServer, &streamServer{})
+
+	fmt.Printf("gRPC server listening on port %s...\n", port)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
 	}
 }
