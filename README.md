@@ -1,20 +1,23 @@
 # Go Bazel Gazelle Project
 
-A simple REST API built with Go using only native libraries, managed by Bazel's Bzlmod system with `rules_go` and Gazelle.
+A gRPC server built with Go using `google.golang.org/grpc`, managed by Bazel's Bzlmod system with `rules_go` and Gazelle.
 
 ## Project Structure
 
-- `main.go`: The Go source code for the REST API.
+- `main.go`: The Go source code for the gRPC server.
+- `telemetry/`: Contains the Protobuf definitions (`telemetry.proto`) and generated Go code.
 - `MODULE.bazel`: Bazel module definitions (Bzlmod).
 - `BUILD.bazel`: Bazel build instructions.
 - `.bazelrc`: Global Bazel configuration flags (optimized for macOS/pure Go).
 - `go.mod`: Go module definition.
+- `test_grpcurl.sh`: A helper script to test the streaming gRPC endpoint.
 
 ## Prerequisites
 
 - [Bazel](https://bazel.build/install) (v7.0.0 or later recommended).
 - [Go](https://go.dev/doc/install) (v1.23.0 or later recommended).
 - macOS users: XCode Command Line Tools.
+- [grpcurl](https://github.com/fullstorydev/grpcurl) (for testing via command line).
 
 ## Getting Started
 
@@ -22,12 +25,12 @@ A simple REST API built with Go using only native libraries, managed by Bazel's 
 
 To build the Go binary:
 ```bash
-bazel build //:go-grpc-xds-ts-server
+bazel build //...
 ```
 
 ### 2. Run the Server
 
-To run the REST API server:
+To run the gRPC server:
 ```bash
 bazel run //:go-grpc-xds-ts-server
 ```
@@ -37,9 +40,9 @@ Once running, the server listens on port `8080` (default). You can override the 
 PORT=9090 bazel run //:go-grpc-xds-ts-server
 ```
 
-Test it with `curl`:
+Test the streaming endpoint using the provided script:
 ```bash
-curl http://localhost:8080/api/hello
+./test_grpcurl.sh
 ```
 
 ### 3. Update Build Files (Gazelle)
@@ -67,11 +70,6 @@ The containerized server also supports the `PORT` environment variable. You can 
 docker run --rm -e PORT=9090 -p 9090:9090 go-grpc-xds-ts-server:latest
 ```
 
-Once running, the containerized API is available at:
-```bash
-curl http://localhost:9090/api/hello
-```
-
 Alternatively, you can build the image directly:
 
 To build the OCI image:
@@ -82,11 +80,6 @@ bazel build //:image
 To load the image into Docker manually:
 ```bash
 bazel run //:load
-```
-
-Once running, the containerized API is available at:
-```bash
-curl http://localhost:8080/api/hello
 ```
 
 ### 5. Push to Artifact Registry
