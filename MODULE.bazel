@@ -1,0 +1,26 @@
+module(
+    name = "go-grpc-xds-ts-server",
+    version = "1.0",
+)
+
+bazel_dep(name = "rules_go", version = "0.53.0")
+bazel_dep(name = "gazelle", version = "0.42.0")
+bazel_dep(name = "apple_support", version = "1.24.2")
+bazel_dep(name = "rules_oci", version = "2.2.1")
+bazel_dep(name = "rules_pkg", version = "1.2.0")
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.23.0")
+
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_mod = "//:go.mod")
+use_repo(go_deps)
+
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "distroless_static",
+    digest = "sha256:fe7a69d1550563d01fe369e61a10eb8acce243d4802249ed23e0fd988024f372",
+    image = "gcr.io/distroless/static",
+)
+use_repo(oci, "distroless_static")
